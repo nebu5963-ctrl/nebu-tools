@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MANGAFLOW TIMER</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230a0a0f'/><text x='16' y='22' text-anchor='middle' font-family='sans-serif' font-weight='bold' font-size='14' fill='%23e8321a'>MF</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --paper: #f5f0e8;
+    --paper2: #ede8df;
+    --accent: #e8321a;
+    --accent2: #f5a623;
+    --muted: #8a8478;
+    --line: rgba(10,10,15,0.12);
+    --white: #ffffff;
+    --r: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.5;
+  }
+
+  header {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 0;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 4px;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+  }
+
+  .nav-tab {
+    padding: 6px 14px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+    border: 1.5px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 20px;
+    transition: all 0.15s;
+  }
+
+  .nav-tab:hover { border-color: var(--ink); color: var(--ink); }
+  .nav-tab.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  .screen {
+    width: 100%;
+    max-width: 520px;
+    padding: 20px 24px 40px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .screen.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card {
+    background: var(--white);
+    border: 1.5px solid var(--line);
+    border-radius: var(--r);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 2px 2px 0 rgba(10,10,15,0.05);
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* ===== Timer screen ===== */
+
+  /* Task selector */
+  .task-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .task-select {
+    flex: 1;
+    padding: 12px 16px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    background: var(--paper2);
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    color: var(--ink);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8478' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    transition: border-color 0.15s;
+  }
+
+  .task-select:focus { outline: none; border-color: var(--accent); }
+  .task-select:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .edit-tasks-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1.5px solid var(--line);
+    background: var(--paper2);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .edit-tasks-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* Timer display */
+  .timer-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0 20px;
+  }
+
+  .timer-task-name {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-weight: 500;
+    min-height: 20px;
+  }
+
+  .timer-digits {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 80px;
+    letter-spacing: 4px;
+    line-height: 1;
+    color: var(--ink);
+    transition: color 0.3s;
+  }
+
+  .timer-digits.running { color: var(--accent); }
+
+  /* Main button */
+  .big-btn-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0 4px;
+  }
+
+  .big-btn {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  }
+
+  .big-btn.idle {
+    background: var(--ink);
+  }
+
+  .big-btn.running-btn {
+    background: var(--accent);
+    box-shadow: 0 4px 24px rgba(232,50,26,0.35);
+  }
+
+  .big-btn:active { transform: scale(0.95); }
+
+  .big-btn svg { width: 40px; height: 40px; }
+
+  /* Today's log */
+  .log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .log-empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .log-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--paper2);
+    border-radius: 10px;
+  }
+
+  .log-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .log-task { font-size: 13px; font-weight: 500; flex: 1; }
+
+  .log-time-stamp {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .log-duration {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    text-align: right;
+    white-space: nowrap;
+    cursor: pointer;
+    padding: 3px 8px;
+    border: 1.5px solid transparent;
+    border-radius: 7px;
+    transition: all 0.15s;
+  }
+
+  /* Show a border and background on hover so it's clear this is editable */
+  .log-duration:hover {
+    border-color: var(--accent);
+    background: var(--paper2);
+    color: var(--accent);
+  }
+
+  .log-duration::after {
+    content: '✎';
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: 5px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .log-duration:hover::after { opacity: 1; color: var(--accent); }
+
+  .log-duration-edit {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .log-duration-edit input {
+    width: 44px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    text-align: right;
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    padding: 2px 4px;
+    background: var(--white);
+    outline: none;
+    -moz-appearance: textfield;
+  }
+
+  .log-duration-edit input::-webkit-outer-spin-button,
+  .log-duration-edit input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .log-delete {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 2px;
+    border-radius: 4px;
+    transition: color 0.15s;
+  }
+
+  .log-delete:hover { color: var(--accent); }
+
+  /* Export */
+  .export-btn {
+    width: 100%;
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    border: 1.5px solid var(--line);
+    background: var(--white);
+    color: var(--ink);
+    cursor: pointer;
+    border-radius: 12px;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .export-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  .clear-btn {
+    display: block;
+    margin: 16px auto 0;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.15s;
+  }
+
+  .clear-btn:hover { color: var(--accent); }
+
+  /* ===== Stats screen ===== */
+
+  .period-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding: 0 2px;
+  }
+
+  .period-nav-btn {
+    padding: 6px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    border: 1.5px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 20px;
+    transition: all 0.15s;
+  }
+
+  .period-nav-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .period-nav-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+
+  .period-nav-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .period-nav-label.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  .period-nav-label.inactive {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line);
+  }
+
+  .period-nav-label.inactive:hover {
+    border-color: var(--ink);
+  }
+
+  .stats-period-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    background: var(--paper2);
+    padding: 4px;
+    border-radius: 12px;
+  }
+
+  .period-tab {
+    flex: 1;
+    padding: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 9px;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .period-tab.active {
+    background: var(--white);
+    color: var(--ink);
+    font-weight: 600;
+    box-shadow: 1px 1px 4px rgba(0,0,0,0.08);
+  }
+
+  .stats-total {
+    text-align: center;
+    padding: 16px 0 12px;
+  }
+
+  .stats-total-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .stats-total-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 3px;
+    line-height: 1;
+  }
+
+  /* Stats hour/minute unit (large number, small unit) */
+  .stats-total-value .unit {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    margin: 0 2px 0 1px;
+  }
+
+  /* Per-task bar chart */
+  .task-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .task-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .task-bar-label {
+    font-size: 12px;
+    width: 72px;
+    flex-shrink: 0;
+    font-weight: 500;
+  }
+
+  .task-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--paper2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .task-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .task-bar-time {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 11px;
+    color: var(--ink);
+    white-space: nowrap;
+    text-align: right;
+    flex-shrink: 0;
+    padding-left: 4px;
+  }
+
+  /* Daily graph */
+  .day-graph-wrap {
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    height: 80px;
+    padding-bottom: 18px;
+    position: relative;
+  }
+
+  .day-graph-wrap::after {
+    content: '';
+    position: absolute;
+    bottom: 18px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .day-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .day-col.selected .day-col-bar {
+    background: var(--accent) !important;
+    opacity: 1 !important;
+  }
+
+  .day-col:hover .day-col-bar {
+    opacity: 0.75;
+  }
+
+  .breakdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .breakdown-period-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--paper);
+    background: var(--ink);
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .breakdown-period-badge.selected {
+    background: var(--accent);
+  }
+
+  /* Bar/pie chart toggle */
+  .breakdown-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chart-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--paper2);
+    padding: 3px;
+    border-radius: 9px;
+  }
+
+  .chart-toggle-btn {
+    padding: 4px 10px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+
+  .chart-toggle-btn.active {
+    background: var(--white);
+    color: var(--ink);
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.08);
+  }
+
+  /* Pie chart */
+  .task-pie {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .pie-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .pie-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pie-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .pie-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .pie-legend-task {
+    flex: 1;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pie-legend-time {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 11px;
+    color: var(--ink);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .pie-legend-pct {
+    color: var(--muted);
+    margin-left: 6px;
+  }
+
+  .day-col-bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    min-height: 0;
+    transition: height 0.4s ease;
+    background: var(--paper2);
+    cursor: default;
+  }
+
+  .day-col.has-data .day-col-bar {
+    background: var(--ink);
+  }
+
+  .day-col.today .day-col-bar {
+    background: var(--accent);
+  }
+
+  .day-col-label {
+    position: absolute;
+    bottom: 0;
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    line-height: 1;
+  }
+
+  .day-col.today .day-col-label {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ===== Task edit modal ===== */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,15,0.5);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open {
+    display: flex;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .modal {
+    background: var(--white);
+    border-radius: 24px;
+    padding: 24px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+  }
+
+  .modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    background: var(--paper2);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .task-edit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .task-edit-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--paper2);
+    border-radius: 10px;
+    border: 1.5px solid transparent;
+    transition: border-color 0.15s, opacity 0.15s;
+  }
+
+  .task-drag-handle {
+    color: var(--muted);
+    cursor: grab;
+    font-size: 16px;
+    user-select: none;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .task-drag-handle:active { cursor: grabbing; }
+  .task-edit-item.dragging { opacity: 0.35; }
+  .task-edit-item.drag-over { border-color: var(--accent); }
+
+  .task-edit-item input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+  }
+
+  .task-edit-delete {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s;
+  }
+
+  .task-edit-delete:hover { color: var(--accent); }
+
+  .add-task-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .add-task-input {
+    flex: 1;
+    padding: 10px 14px;
+    background: var(--paper2);
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .add-task-input:focus { border-color: var(--accent); }
+
+  .add-task-btn {
+    padding: 10px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .add-task-btn:hover { background: var(--accent); }
+
+  /* Confirm modal (replaces the native confirm) */
+  .confirm-modal { max-width: 340px; text-align: center; }
+
+  .confirm-msg {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink);
+    margin-bottom: 20px;
+  }
+
+  .confirm-actions { display: flex; gap: 10px; }
+
+  .confirm-actions button {
+    flex: 1;
+    padding: 11px;
+    border-radius: 10px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid var(--line);
+    transition: all 0.15s;
+  }
+
+  .confirm-cancel { background: var(--paper2); color: var(--ink); }
+  .confirm-cancel:hover { border-color: var(--ink); }
+  .confirm-ok { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .confirm-ok:hover { filter: brightness(0.92); }
+
+  /* Walker animation */
+  #walkerContainer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 216px;
+    pointer-events: none;
+    z-index: 200;
+  }
+
+  #walker {
+    position: absolute;
+    width: 216px;
+    height: 216px;
+    image-rendering: pixelated;
+    background-image: url('idle.png');
+    background-size: 1080px 1080px;
+    background-repeat: no-repeat;
+    background-position: 0 0;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">MANGA<span>FLOW</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showScreen('timer')">Timer</button>
+    <button class="nav-tab" onclick="showScreen('stats')">Stats</button>
+  </div>
+</header>
+
+<!-- ===== Timer screen ===== -->
+<div class="screen active" id="screen-timer">
+
+  <!-- Task selector -->
+  <div class="card">
+    <div class="section-label">TASK</div>
+    <div class="task-selector">
+      <select class="task-select" id="taskSelect"></select>
+      <button class="edit-tasks-btn" onclick="openModal()" title="Edit tasks">✏️</button>
+    </div>
+  </div>
+
+  <!-- Timer -->
+  <div class="card" style="text-align:center;">
+    <div class="timer-wrap">
+      <div class="timer-task-name" id="timerTaskLabel">—</div>
+      <div class="timer-digits" id="timerDisplay">00:00:00</div>
+    </div>
+    <div class="big-btn-wrap">
+      <button class="big-btn idle" id="bigBtn" onclick="toggleTimer()">
+        <svg id="btnIcon" viewBox="0 0 40 40" fill="none">
+          <polygon points="14,10 32,20 14,30" fill="white"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Today's log -->
+  <div class="card">
+    <div class="section-label">TODAY'S LOG</div>
+    <div class="log-list" id="logList">
+      <div class="log-empty">No entries yet</div>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- ===== Stats screen ===== -->
+<div class="screen" id="screen-stats">
+
+  <div class="stats-period-tabs">
+    <button class="period-tab active" onclick="selectPeriod('week',this)">Week</button>
+    <button class="period-tab" onclick="selectPeriod('month',this)">Month</button>
+    <button class="period-tab" onclick="selectPeriod('year',this)">Year</button>
+  </div>
+
+  <div class="period-nav">
+    <button class="period-nav-btn" onclick="shiftOffset(-1)">‹ Prev</button>
+    <div class="period-nav-label active" id="periodNavLabel" onclick="clearBreakdownSelection()"></div>
+    <button class="period-nav-btn" id="periodNavNext" onclick="shiftOffset(1)">Next ›</button>
+  </div>
+
+  <div class="card">
+    <div class="stats-total">
+      <div class="stats-total-label">TOTAL TIME</div>
+      <div class="stats-total-value" id="statsTotalValue">0:00</div>
+    </div>
+    <!-- Daily graph (week view only) -->
+    <div id="dayGraphArea"></div>
+  </div>
+
+  <div class="card">
+    <div class="breakdown-header">
+      <div class="section-label" style="margin-bottom:0;">TASK BREAKDOWN</div>
+      <div class="breakdown-header-right">
+        <div class="chart-toggle">
+          <button class="chart-toggle-btn active" id="chartBarBtn" onclick="setChartType('bar')">Bar</button>
+          <button class="chart-toggle-btn" id="chartPieBtn" onclick="setChartType('pie')">Pie</button>
+        </div>
+        <div class="breakdown-period-badge" id="breakdownLabel"></div>
+      </div>
+    </div>
+    <div class="task-bars" id="taskBars"></div>
+    <div class="task-pie" id="taskPie" style="display:none;"></div>
+  </div>
+
+  <button class="export-btn" onclick="exportData()">↓ Export CSV</button>
+
+  <button class="clear-btn" onclick="clearAllData()">Clear all data</button>
+
+</div>
+
+<!-- ===== Task edit modal ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">TASKS</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="task-edit-list" id="taskEditList"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" id="newTaskInput" placeholder="Add a new task..." onkeydown="if(event.key==='Enter')addTask()">
+      <button class="add-task-btn" onclick="addTask()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Confirm modal ===== -->
+<div class="modal-overlay" id="confirmOverlay" onclick="closeConfirmOutside(event)">
+  <div class="modal confirm-modal">
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" id="confirmCancel">Cancel</button>
+      <button class="confirm-ok" id="confirmOk">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Walker animation =====
+const WALKER_COLS       = 5;
+const WALKER_ROWS       = 5;
+const WALKER_FRAME_SIZE = 216;
+const WALKER_FPS        = 10;
+const WALKER_SPEED      = 1.5;
+
+const SPRITE_IMAGES = {
+  idle:     "url('idle.png')",
+  walk:     "url('walk.png')",
+  sit:      "url('sit.png')",
+  victory:  "url('victory.png')",
+  thinking: "url('thinking.png')",
+  dance:    "url('dance.png')"
+};
+
+let walkerFrame      = 0;
+let walkerX          = 40;
+let walkerDir        = 1;
+let walkerMode       = 'idle';
+let walkerInterval   = null;
+let victoryTimeout   = null;
+
+// Detect which sprite sheets exist (default available; a mode whose image fails to load won't fire)
+const spriteOk = {};
+Object.keys(SPRITE_IMAGES).forEach(mode=>{
+  spriteOk[mode] = true;
+  const probe = new Image();
+  probe.onerror = ()=>{ spriteOk[mode] = false; };
+  probe.src = SPRITE_IMAGES[mode].match(/url\('(.+?)'\)/)[1];
+});
+
+function walkerTick(){
+  const el = document.getElementById('walker');
+  if(walkerMode === 'walk'){
+    const maxX = window.innerWidth - WALKER_FRAME_SIZE - 24;
+    walkerX += WALKER_SPEED * walkerDir;
+    if(walkerX >= maxX){ walkerX = maxX; walkerDir = -1; }
+    if(walkerX <= 24)  { walkerX = 24;   walkerDir =  1; }
+    el.style.left      = walkerX + 'px';
+    el.style.transform = walkerDir === -1 ? 'scaleX(-1)' : '';
+  }
+  if(walkerMode === 'sit'){
+    // Play frames 1-25 (index 0-24) once, then loop frames 16-25 (index 15-24)
+    walkerFrame = walkerFrame >= 24 ? 15 : walkerFrame + 1;
+  } else {
+    walkerFrame = (walkerFrame + 1) % (WALKER_COLS * WALKER_ROWS);
+  }
+  const col = walkerFrame % WALKER_COLS;
+  const row = Math.floor(walkerFrame / WALKER_COLS);
+  el.style.backgroundPosition = `-${col * WALKER_FRAME_SIZE}px -${row * WALKER_FRAME_SIZE}px`;
+}
+
+function spriteSetMode(mode){
+  if(spriteOk[mode] === false) return; // Don't fire a mode whose sprite sheet is missing
+  if(victoryTimeout){ clearTimeout(victoryTimeout); victoryTimeout = null; }
+  // When entering sit, restart the intro from the first frame (-1 so the next tick draws index 0)
+  if(mode === 'sit' && walkerMode !== 'sit') walkerFrame = -1;
+  walkerMode = mode;
+  document.getElementById('walker').style.backgroundImage = SPRITE_IMAGES[mode] || SPRITE_IMAGES.idle;
+  if(!walkerInterval){
+    walkerInterval = setInterval(walkerTick, 1000 / WALKER_FPS);
+  }
+  if(mode === 'victory' || mode === 'dance'){
+    victoryTimeout = setTimeout(()=>{ spriteSetMode('idle'); }, 5000);
+  }
+}
+
+function spritePlay(){
+  spriteSetMode(seconds >= 300 ? 'sit' : 'walk');
+}
+
+function spritePause(){
+  // On stop, show victory or dance, chosen at random among the sprites that exist
+  const opts = ['victory','dance'].filter(m => spriteOk[m] !== false);
+  if(opts.length === 0) return;
+  spriteSetMode(opts[Math.floor(Math.random() * opts.length)]);
+}
+
+// ===== Data (persisted to localStorage) =====
+const PRESETS    = ['Storyboard','Sketch','Inking','Finishing','Background','Digital','Other'];
+const BAR_COLORS = ['#e8321a','#f5a623','#4a9eda','#7c5cbf','#2a7a4a','#e0468a','#4a4e69','#0d9488'];
+const STORE_KEY  = 'mangaflow-timer';
+
+let tasks = [];
+let logs  = [];
+
+function loadData(){
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    const val = raw ? JSON.parse(raw) : {};
+    tasks = val.tasks || [...PRESETS];
+    logs  = val.logs  || [];
+  } catch(e){
+    console.error('Failed to load:', e);
+    tasks = [...PRESETS];
+    logs  = [];
+  }
+}
+
+function saveData(){
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ tasks, logs }));
+  } catch(e){
+    console.error('Failed to save:', e);
+  }
+}
+
+// ===== Time/date utilities =====
+// Important: log dates are kept as the local 'YYYY-MM-DD' string created at save time.
+// new Date('YYYY-MM-DD') is parsed as UTC midnight and drifts across timezones, so aggregation compares the strings directly.
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function localDateStr(d = new Date()){
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function fmt12h(d){
+  let h = d.getHours();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${pad(d.getMinutes())} ${ampm}`;
+}
+
+// For the timer display and today's log (shows seconds)
+function fmtClock(s){
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
+  return `${pad(h)}:${pad(m)}:${pad(ss)}`;
+}
+
+// For stats: seconds → minutes (rounded), minutes → "Xh Ym"
+function toMin(sec){ return Math.round(sec/60); }
+function fmtHM(min){
+  const h = Math.floor(min/60), m = min%60;
+  if(h > 0 && m > 0) return `${h}h ${m}m`;
+  if(h > 0)          return `${h}h`;
+  return `${m}m`;
+}
+
+// ===== Timer =====
+let timerInterval = null;
+let seconds   = 0;
+let running   = false;
+let startTime = null;
+
+function updateTimerDisplay(){
+  document.getElementById('timerDisplay').textContent = fmtClock(seconds);
+}
+
+function setTimerUI(isRunning){
+  const btn  = document.getElementById('bigBtn');
+  const icon = document.getElementById('btnIcon');
+  const disp = document.getElementById('timerDisplay');
+  const editBtn = document.querySelector('.edit-tasks-btn');
+  if(isRunning){
+    btn.className = 'big-btn running-btn';
+    icon.innerHTML = '<rect x="11" y="10" width="7" height="20" rx="2" fill="white"/><rect x="22" y="10" width="7" height="20" rx="2" fill="white"/>';
+    disp.classList.add('running');
+  } else {
+    btn.className = 'big-btn idle';
+    icon.innerHTML = '<polygon points="14,10 32,20 14,30" fill="white"/>';
+    disp.classList.remove('running');
+  }
+  document.getElementById('taskSelect').disabled = isRunning;
+  editBtn.disabled = isRunning;
+  editBtn.style.opacity = isRunning ? '0.35' : '';
+}
+
+function saveCurrentSession(){
+  if(seconds <= 0) return;
+  const base = startTime || new Date();
+  logs.push({
+    task:    document.getElementById('taskSelect').value,
+    seconds: seconds,
+    date:    localDateStr(base),    // Start date (stats aggregate on this)
+    time:    fmt12h(base),
+    endDate: localDateStr()         // End date (so a midnight-crossing session still shows in today's log)
+  });
+  saveData();
+  renderLogList();
+}
+
+function toggleTimer(){
+  if(!running){
+    running   = true;
+    startTime = new Date();
+    setTimerUI(true);
+    timerInterval = setInterval(()=>{
+      seconds = Math.floor((Date.now() - startTime.getTime()) / 1000);
+      updateTimerDisplay();
+      if(walkerMode === 'walk' && seconds >= 300) spriteSetMode('sit');
+    }, 1000);
+    spritePlay();
+  } else {
+    running = false;
+    clearInterval(timerInterval);
+    setTimerUI(false);
+    spritePause();
+    saveCurrentSession();
+    seconds = 0;
+    updateTimerDisplay();
+  }
+}
+
+// ===== Task selector =====
+function renderTaskSelect(){
+  const sel = document.getElementById('taskSelect');
+  const cur = sel.value;
+  sel.innerHTML = '';
+  tasks.forEach(t=>{
+    const opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    if(t === cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  updateTimerTaskLabel();
+}
+
+function updateTimerTaskLabel(){
+  const sel = document.getElementById('taskSelect');
+  document.getElementById('timerTaskLabel').textContent = sel.value || '—';
+}
+
+// ===== Today's log =====
+function renderLogList(){
+  const today = localDateStr();
+  const el    = document.getElementById('logList');
+  // Keep each entry's real array index while filtering today's rows, so deletion targets the right one
+  const rows = [];
+  // Show sessions that started today, or that crossed midnight and ended today (so a forgotten stop can still be fixed)
+  logs.forEach((l, idx)=>{ if(l.date === today || l.endDate === today) rows.push({ l, idx }); });
+
+  if(rows.length === 0){
+    el.innerHTML = '<div class="log-empty">No entries yet</div>';
+    return;
+  }
+  el.innerHTML = '';
+  rows.reverse().forEach(({ l, idx })=>{
+    const div = document.createElement('div');
+    div.className = 'log-item';
+    // For sessions started before today, prefix the time with the start date to disambiguate
+    const tstamp = (l.date && l.date !== today)
+      ? `${Number(l.date.slice(5,7))}/${Number(l.date.slice(8,10))} ${l.time || ''}`
+      : (l.time || '');
+    div.innerHTML = `
+      <div class="log-dot"></div>
+      <div class="log-task">${escHtml(l.task)}</div>
+      <div class="log-time-stamp">${tstamp}</div>
+      <div class="log-duration">${fmtHM(toMin(l.seconds))}</div>
+      <button class="log-delete" title="Delete">×</button>
+    `;
+    const durEl = div.querySelector('.log-duration');
+    durEl.title = 'Click to edit';
+    durEl.addEventListener('click', ()=>editDuration(idx, durEl, l.seconds));
+    div.querySelector('.log-delete').addEventListener('click', ()=>deleteLog(idx));
+    el.appendChild(div);
+  });
+}
+
+function deleteLog(idx){
+  logs.splice(idx, 1);
+  saveData();
+  renderLogList();
+  renderStats();
+}
+
+// Inline-edit a today's-log entry's duration as hours/minutes
+function editDuration(idx, el, curSec){
+  const min = toMin(curSec);
+  const h = Math.floor(min/60), m = min%60;
+  const wrap = document.createElement('div');
+  wrap.className = 'log-duration-edit';
+  wrap.innerHTML = `<input type="number" min="0" class="dur-h" value="${h}">h<input type="number" min="0" max="59" class="dur-m" value="${m}">m`;
+  el.replaceWith(wrap);
+  const hi = wrap.querySelector('.dur-h'), mi = wrap.querySelector('.dur-m');
+  hi.focus(); hi.select();
+  let done = false;
+  const commit = ()=>{
+    if(done) return;
+    done = true;
+    const hh = Math.max(parseInt(hi.value,10) || 0, 0);
+    const mm = Math.max(parseInt(mi.value,10) || 0, 0);
+    const sec = (hh*60 + mm) * 60;
+    if(sec > 0 && sec !== logs[idx].seconds){
+      logs[idx].seconds = sec;
+      saveData();
+      renderStats();
+    }
+    renderLogList();
+  };
+  wrap.addEventListener('focusout', e=>{
+    if(wrap.contains(e.relatedTarget)) return; // Don't commit when focus just moves between the two inputs
+    commit();
+  });
+  wrap.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){ e.preventDefault(); commit(); }
+    else if(e.key === 'Escape'){ done = true; renderLogList(); }
+  });
+}
+
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ===== Stats =====
+let currentPeriod  = 'week';
+let periodOffset   = 0;
+let selectedBar    = null; // { date:'YYYY-MM-DD' } | { month:'YYYY-MM' } | null
+let breakdownChart = 'bar'; // 'bar' | 'pie'
+const MONTH_ABBR   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Reference date with the offset applied (local time)
+function getBaseDate(){
+  const d = new Date();
+  if(currentPeriod === 'week')  d.setDate(d.getDate() + periodOffset*7);
+  else if(currentPeriod === 'month') d.setMonth(d.getMonth() + periodOffset);
+  else d.setFullYear(d.getFullYear() + periodOffset);
+  return d;
+}
+
+// Returns the 7 'YYYY-MM-DD' strings for the Monday-start week containing the base date
+function weekDays(base){
+  const dow = (base.getDay()+6)%7; // 0 = Monday
+  const mon = new Date(base); mon.setDate(base.getDate()-dow);
+  const days = [];
+  for(let i=0;i<7;i++){ const d = new Date(mon); d.setDate(mon.getDate()+i); days.push(localDateStr(d)); }
+  return days;
+}
+
+// Returns logs within the period, matched purely on the date string
+function getFilteredLogs(){
+  const base = getBaseDate();
+  if(currentPeriod === 'week'){
+    const days = weekDays(base);
+    return logs.filter(l=>days.includes(l.date));
+  } else if(currentPeriod === 'month'){
+    const prefix = `${base.getFullYear()}-${pad(base.getMonth()+1)}`; // 'YYYY-MM'
+    return logs.filter(l=>l.date.slice(0,7) === prefix);
+  } else {
+    const prefix = String(base.getFullYear());                       // 'YYYY'
+    return logs.filter(l=>l.date.slice(0,4) === prefix);
+  }
+}
+
+function getPeriodLabel(){
+  const base = getBaseDate();
+  if(currentPeriod === 'week'){
+    const d = weekDays(base);
+    const f = s => `${Number(s.slice(5,7))}/${Number(s.slice(8,10))}`;
+    return `${base.getFullYear()}  ${f(d[0])} – ${f(d[6])}`;
+  } else if(currentPeriod === 'month'){
+    return `${MONTH_ABBR[base.getMonth()]} ${base.getFullYear()}`;
+  }
+  return `${base.getFullYear()}`;
+}
+
+function getBreakdownPeriodLabel(){
+  const base = getBaseDate();
+  if(currentPeriod === 'week'){
+    const d = weekDays(base);
+    const f = s => `${Number(s.slice(5,7))}/${Number(s.slice(8,10))}`;
+    return `${f(d[0])} – ${f(d[6])}`;
+  } else if(currentPeriod === 'month'){
+    return `${base.getFullYear()}/${pad(base.getMonth()+1)}`;
+  }
+  return `${base.getFullYear()}`;
+}
+
+function selectPeriod(period, el){
+  currentPeriod = period;
+  periodOffset  = 0;
+  document.querySelectorAll('.period-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderStats();
+}
+
+function shiftOffset(delta){
+  periodOffset += delta;
+  renderStats();
+}
+
+function clearBreakdownSelection(){
+  if(!selectedBar) return;
+  selectedBar = null;
+  const filtered = getFilteredLogs();
+  renderBreakdown(filtered, null);
+  renderGraph(filtered);
+  updatePeriodNavLabel();
+}
+
+function updatePeriodNavLabel(){
+  const el = document.getElementById('periodNavLabel');
+  el.textContent = getPeriodLabel();
+  el.className = 'period-nav-label ' + (selectedBar ? 'inactive' : 'active');
+}
+
+// The core aggregation: sums seconds per task and draws both the bar and pie views.
+// TOTAL TIME tracks whatever range breakdown is currently showing (picking a day/month narrows it to just that).
+function renderBreakdown(filteredLogs, label){
+  renderTotal(filteredLogs);
+
+  const badge = document.getElementById('breakdownLabel');
+  if(label){
+    badge.textContent = label;
+    badge.classList.add('selected');
+  } else {
+    badge.textContent = getBreakdownPeriodLabel();
+    badge.classList.remove('selected');
+  }
+
+  const taskSecs = {};
+  filteredLogs.forEach(l=>{ taskSecs[l.task] = (taskSecs[l.task]||0) + l.seconds; });
+  const sorted   = Object.entries(taskSecs).sort((a,b)=>b[1]-a[1]);
+  const totalSec = sorted.reduce((a,[,s])=>a+s, 0);
+
+  const bars = document.getElementById('taskBars');
+  const pie  = document.getElementById('taskPie');
+
+  if(sorted.length === 0 || totalSec === 0){
+    bars.innerHTML = '<div class="log-empty">No data</div>';
+    pie.innerHTML  = '<div class="log-empty">No data</div>';
+    applyChartVisibility();
+    return;
+  }
+
+  // Bar chart
+  const maxMin = Math.max(toMin(sorted[0][1]), 1);
+  bars.innerHTML = '';
+  sorted.forEach(([task, sec])=>{
+    const min   = toMin(sec);
+    const color = BAR_COLORS[tasks.indexOf(task) % BAR_COLORS.length] || BAR_COLORS[6];
+    const pct   = (min / maxMin) * 100;
+    const div   = document.createElement('div');
+    div.className = 'task-bar-row';
+    div.innerHTML = `
+      <div class="task-bar-label">${escHtml(task)}</div>
+      <div class="task-bar-track"><div class="task-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+      <div class="task-bar-time">${fmtHM(min)}</div>
+    `;
+    bars.appendChild(div);
+  });
+
+  // Pie chart (conic-gradient) + legend
+  let acc = 0;
+  const stops = [], legend = [];
+  sorted.forEach(([task, sec])=>{
+    const color = BAR_COLORS[tasks.indexOf(task) % BAR_COLORS.length] || BAR_COLORS[6];
+    const start = (acc / totalSec) * 100;
+    acc += sec;
+    const end   = (acc / totalSec) * 100;
+    stops.push(`${color} ${start}% ${end}%`);
+    const pctNum = Math.round((sec / totalSec) * 100);
+    legend.push(`
+      <div class="pie-legend-item">
+        <span class="pie-legend-dot" style="background:${color};"></span>
+        <span class="pie-legend-task">${escHtml(task)}</span>
+        <span class="pie-legend-time">${fmtHM(toMin(sec))}<span class="pie-legend-pct">${pctNum}%</span></span>
+      </div>`);
+  });
+  pie.innerHTML = `<div class="pie-circle" style="background:conic-gradient(${stops.join(',')});"></div><div class="pie-legend">${legend.join('')}</div>`;
+
+  applyChartVisibility();
+}
+
+function applyChartVisibility(){
+  document.getElementById('taskBars').style.display = breakdownChart === 'bar' ? 'flex' : 'none';
+  document.getElementById('taskPie').style.display  = breakdownChart === 'pie' ? 'flex' : 'none';
+}
+
+function setChartType(type){
+  breakdownChart = type;
+  document.getElementById('chartBarBtn').classList.toggle('active', type === 'bar');
+  document.getElementById('chartPieBtn').classList.toggle('active', type === 'pie');
+  applyChartVisibility();
+}
+
+// Render TOTAL TIME (large number, small unit)
+function renderTotal(filteredLogs){
+  const taskSecs = {};
+  filteredLogs.forEach(l=>{ taskSecs[l.task] = (taskSecs[l.task]||0) + l.seconds; });
+  // TOTAL is the sum of each task's rounded minutes, so it always matches the per-task bars.
+  const totalMin = Object.values(taskSecs).reduce((a,s)=>a+toMin(s), 0);
+  const h = Math.floor(totalMin/60), m = totalMin%60;
+  const num  = n => `<span>${n}</span>`;
+  const unit = u => `<span class="unit">${u}</span>`;
+  let html;
+  if(h > 0) html = num(h) + unit('h') + (m > 0 ? num(m) + unit('m') : '');
+  else      html = num(m) + unit('m');
+  document.getElementById('statsTotalValue').innerHTML = html;
+}
+
+function dayBarClick(filtered, key, label){
+  if(selectedBar && (selectedBar.date === key || selectedBar.month === key)){
+    selectedBar = null;
+    renderBreakdown(filtered, null);
+  } else {
+    selectedBar = key.length === 7 ? { month:key } : { date:key };
+    const sub = filtered.filter(l => key.length === 7 ? l.date.slice(0,7) === key : l.date === key);
+    renderBreakdown(sub, label);
+  }
+  renderGraph(filtered);
+  updatePeriodNavLabel();
+}
+
+function renderGraph(filtered){
+  const area = document.getElementById('dayGraphArea');
+  area.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'day-graph-wrap';
+  area.appendChild(wrap);
+
+  const base     = getBaseDate();
+  const todayStr = localDateStr();
+
+  // Each column: { key, label, sec, isToday, barLabel } — key is a date ('YYYY-MM-DD') or a month ('YYYY-MM')
+  let cols = [];
+
+  if(currentPeriod === 'week'){
+    const days   = weekDays(base);
+    const labels = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+    cols = days.map((d,i)=>({
+      key:d, label:labels[i],
+      sec: filtered.filter(l=>l.date===d).reduce((a,l)=>a+l.seconds,0),
+      isToday: d===todayStr,
+      barLabel: `${Number(d.slice(5,7))}/${Number(d.slice(8,10))}`
+    }));
+  } else if(currentPeriod === 'month'){
+    const year = base.getFullYear(), month = base.getMonth();
+    const dim  = new Date(year, month+1, 0).getDate();
+    for(let i=1;i<=dim;i++){
+      const d = localDateStr(new Date(year, month, i));
+      cols.push({
+        key:d, label:(i%5===1?String(i):''),
+        sec: filtered.filter(l=>l.date===d).reduce((a,l)=>a+l.seconds,0),
+        isToday: d===todayStr,
+        barLabel: `${month+1}/${i}`
+      });
+    }
+  } else { // year
+    const year = base.getFullYear();
+    const now  = new Date();
+    for(let m=0;m<12;m++){
+      const key = `${year}-${pad(m+1)}`;
+      cols.push({
+        key, label:MONTH_ABBR[m],
+        sec: filtered.filter(l=>l.date.slice(0,7)===key).reduce((a,l)=>a+l.seconds,0),
+        isToday: year===now.getFullYear() && m===now.getMonth(),
+        barLabel: MONTH_ABBR[m]
+      });
+    }
+  }
+
+  const maxSec = Math.max(...cols.map(c=>c.sec), 1);
+  cols.forEach(c=>{
+    const isSel = selectedBar && (selectedBar.date === c.key || selectedBar.month === c.key);
+    const col = document.createElement('div');
+    col.className = 'day-col' + (c.sec>0?' has-data':'') + (c.isToday?' today':'') + (isSel?' selected':'');
+    const barH = Math.max((c.sec/maxSec)*56, 0);
+    col.innerHTML = `<div class="day-col-bar" style="height:${barH}px;"></div><div class="day-col-label">${c.label}</div>`;
+    col.addEventListener('click', ()=>dayBarClick(filtered, c.key, `▸ ${c.barLabel}`));
+    wrap.appendChild(col);
+  });
+}
+
+function renderStats(){
+  selectedBar = null;
+  const filtered = getFilteredLogs();
+  updatePeriodNavLabel();
+  document.getElementById('periodNavNext').disabled = periodOffset >= 0;
+  renderBreakdown(filtered, null);
+  renderGraph(filtered);
+}
+
+// ===== Modal =====
+let dragSrcIdx = null;
+
+function openModal(){
+  renderTaskEditList();
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+  renderTaskSelect();
+  renderStats();
+}
+
+function closeModalOutside(e){
+  if(e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function renderTaskEditList(){
+  const el = document.getElementById('taskEditList');
+  el.innerHTML = '';
+  tasks.forEach((t,i)=>{
+    const div = document.createElement('div');
+    div.className = 'task-edit-item';
+    div.innerHTML = `
+      <span class="task-drag-handle" title="Drag to reorder">⠿</span>
+      <input draggable="false">
+      <button class="task-edit-delete" title="Delete" draggable="false">×</button>
+    `;
+    const input = div.querySelector('input');
+    input.value = t;
+    input.addEventListener('blur', ()=>renameTask(i, input.value));
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') input.blur(); });
+    div.querySelector('.task-edit-delete').addEventListener('click', ()=>removeTask(i));
+
+    const handle = div.querySelector('.task-drag-handle');
+    handle.addEventListener('mousedown', ()=>{ div.draggable = true; });
+    div.addEventListener('dragstart', e=>{
+      dragSrcIdx = i;
+      div.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    div.addEventListener('dragend', ()=>{
+      div.draggable = false;
+      dragSrcIdx = null;
+      div.classList.remove('dragging');
+      el.querySelectorAll('.task-edit-item').forEach(d=>d.classList.remove('drag-over'));
+    });
+    div.addEventListener('dragover', e=>{
+      if(dragSrcIdx === null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      div.classList.add('drag-over');
+    });
+    div.addEventListener('dragleave', ()=>div.classList.remove('drag-over'));
+    div.addEventListener('drop', e=>{
+      e.preventDefault();
+      div.classList.remove('drag-over');
+      if(dragSrcIdx === null || dragSrcIdx === i) return;
+      const moved = tasks.splice(dragSrcIdx, 1)[0];
+      tasks.splice(i, 0, moved);
+      saveData();
+      renderTaskEditList();
+      dragSrcIdx = null;
+    });
+    el.appendChild(div);
+  });
+}
+
+function renameTask(i, val){
+  const v = val.trim();
+  if(v && v !== tasks[i]){ tasks[i] = v; saveData(); }
+}
+
+function removeTask(i){
+  if(tasks.length <= 1){ alert('At least one task is required'); return; }
+  tasks.splice(i, 1);
+  saveData();
+  renderTaskEditList();
+}
+
+function addTask(){
+  const input = document.getElementById('newTaskInput');
+  const val = input.value.trim();
+  if(!val) return;
+  if(tasks.includes(val)){ alert('That name already exists'); return; }
+  tasks.push(val);
+  saveData();
+  input.value = '';
+  renderTaskEditList();
+}
+
+// ===== Screen switching =====
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  event.target.classList.add('active');
+  if(name === 'stats'){
+    renderStats();
+    spriteSetMode('thinking');
+  } else {
+    spriteSetMode(running ? (seconds >= 300 ? 'sit' : 'walk') : 'idle');
+  }
+}
+
+// ===== Export =====
+function exportData(){
+  const q = v => `"${String(v).replace(/"/g,'""')}"`;
+  const rows = [['Date','Task','Start Time','Duration']];
+  logs.forEach(l => rows.push([l.date, l.task, l.time || '', fmtClock(l.seconds)]));
+  // Leading BOM makes Excel recognize UTF-8 (avoids garbled non-ASCII text); CRLF line endings for Excel.
+  const csv = '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `mangaflow-${localDateStr()}.csv`;
+  a.click();
+}
+
+// In-app confirm modal (avoids the native confirm()'s odd position and "this page says" wording)
+function showConfirm(message, onConfirm){
+  document.getElementById('confirmMsg').textContent = message;
+  document.getElementById('confirmOverlay').classList.add('open');
+  document.getElementById('confirmOk').onclick = ()=>{ closeConfirm(); onConfirm(); };
+  document.getElementById('confirmCancel').onclick = closeConfirm;
+}
+function closeConfirm(){ document.getElementById('confirmOverlay').classList.remove('open'); }
+function closeConfirmOutside(e){ if(e.target === document.getElementById('confirmOverlay')) closeConfirm(); }
+
+// Clear all data (logs only — the task list is kept)
+function clearAllData(){
+  showConfirm('This will delete all logged work history. This cannot be undone. Are you sure?', ()=>{
+    logs = [];
+    saveData();
+    renderLogList();
+    renderStats();
+  });
+}
+
+// ===== Refresh today's log/stats when the date rolls over =====
+function scheduleMidnightReset(){
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  setTimeout(()=>{
+    renderLogList();
+    renderStats();
+    scheduleMidnightReset();
+  }, midnight - now);
+}
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', ()=>{
+  loadData();
+  document.getElementById('taskSelect').addEventListener('change', updateTimerTaskLabel);
+  renderTaskSelect();
+  renderLogList();
+  renderStats();
+  scheduleMidnightReset();
+  spriteSetMode('idle');
+  window.addEventListener('beforeunload', ()=>{
+    if(running && startTime){
+      seconds = Math.floor((Date.now() - startTime.getTime()) / 1000);
+      saveCurrentSession();
+    }
+  });
+});
+</script>
+
+<div id="walkerContainer">
+  <div id="walker"></div>
+</div>
+
+</body>
+</html>
